@@ -15,7 +15,7 @@ for frame in (frame1, frame2):
     frame.place(x=0, y=0, relwidth=1, relheight=1)
 
 
-image1 = Image.open('Images/1.png')
+image1 = Image.open('Exercise 1\Images/1.png')
 image1 = image1.resize((595, 842), Image.LANCZOS)
 bg1 = ImageTk.PhotoImage(image1)
 
@@ -38,7 +38,7 @@ start_button = Button(frame1,
 start_button.place(x=255, y=318)
 
 
-image2 = Image.open('Images/2.png')
+image2 = Image.open('Exercise 1\Images/2.png')
 image2 = image2.resize((595, 842), Image.LANCZOS)
 bg2 = ImageTk.PhotoImage(image2)
 
