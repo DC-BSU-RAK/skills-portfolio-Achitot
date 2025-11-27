@@ -56,13 +56,16 @@ class StudentManagerApp:
     
     def load_data(self):
         try:
-            file_path = "Exercise 3\studentMarks.txt"
+            file_path = "Exercise 3/studentMarks.txt"
             if not os.path.exists(file_path):
-                messagebox.showerror("Error", f"Failed to load data")
+                messagebox.showwarning("Warning", f"File not found.")
                 return
             
             with open(file_path, 'r') as file:
                 lines = file.readlines()
+                
+            if not lines:
+                return
                 
             num_students = int(lines[0].strip())
             
@@ -79,10 +82,29 @@ class StudentManagerApp:
                         self.students.append(student)
                         
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to load data")
+            messagebox.showerror("Error", f"Failed to load data: {str(e)}")
     
-    
-# Main Application Frame (View Details Buttons)
+    # Saving New Data
+    def save_data(self):
+        try:
+            file_path = "Exercise 3/studentMarks.txt"
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            with open(file_path, 'w') as file:
+                # Write the number of students
+                file.write(f"{len(self.students)}\n")
+                
+                # Write student's data
+                for student in self.students:
+                    coursework_str = ','.join(str(mark) for mark in student.coursework_marks)
+                    file.write(f"{student.student_number},{student.name},{coursework_str},{student.exam_mark}\n")
+                    
+            return True
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save data: {str(e)}")
+            return False
+
     def create_menu(self):
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
@@ -94,9 +116,22 @@ class StudentManagerApp:
         view_menu.add_separator()
         view_menu.add_command(label="Highest Overall Mark", command=self.show_highest_mark)
         view_menu.add_command(label="Lowest Overall Mark", command=self.show_lowest_mark)
+        
+        # Sort menu
+        sort_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Sort", menu=sort_menu)
+        sort_menu.add_command(label="Sort by Name (Ascending)", command=lambda: self.sort_students('name', True))
+        sort_menu.add_command(label="Sort by Name (Descending)", command=lambda: self.sort_students('name', False))
+        sort_menu.add_command(label="Sort by Student Number (Ascending)", command=lambda: self.sort_students('number', True))
+        sort_menu.add_command(label="Sort by Student Number (Descending)", command=lambda: self.sort_students('number', False))
+        
+        # Manage menu
+        manage_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Manage", menu=manage_menu)
+        manage_menu.add_command(label="Add Student", command=self.add_student)
+        manage_menu.add_command(label="Delete Student", command=self.delete_student)
+        manage_menu.add_command(label="Update Student", command=self.update_student)
     
-    
-# Main Application Frame (Display Screen)
     def create_main_frame(self):
         self.main_frame = ttk.Frame(self.root, padding="10")
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -149,7 +184,6 @@ class StudentManagerApp:
         box_frame.columnconfigure(1, weight=1)
         
         if clickable:
-
             box_frame.bind("<Enter>", lambda e, frame=box_frame: self.on_box_enter(frame))
             box_frame.bind("<Leave>", lambda e, frame=box_frame: self.on_box_leave(frame))
             box_frame.bind("<Button-1>", lambda e, s=student: self.show_individual_student(s))
@@ -223,8 +257,306 @@ class StudentManagerApp:
         }
         return colors.get(grade, 'black')
     
+    # Sorting Student Records
+    def sort_students(self, sort_by, ascending=True):
+        if not self.students:
+            messagebox.showwarning("No Data", "No student records available to sort.")
+            return
+        
+        if sort_by == 'name':
+            self.students.sort(key=lambda s: s.name.lower(), reverse=not ascending)
+        elif sort_by == 'number':
+            self.students.sort(key=lambda s: s.student_number, reverse=not ascending)
+        
+        # Save the sorted data
+        self.save_data()
+        
+        # Refresh the display
+        self.view_all_students()
+        
+        order = "ascending" if ascending else "descending"
+        self.status_var.set(f"Sorted students by {sort_by} in {order} order")
     
-# Show All student Records
+    # Adding a student record
+    def add_student(self):
+        # Create a dialog window for adding a new student
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Add New Student")
+        dialog.geometry("400x350")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        ttk.Label(dialog, text="Add New Student", font=('Arial', 14, 'bold')).grid(row=0, column=0, columnspan=2, pady=10)
+        
+        # Input fields
+        ttk.Label(dialog, text="Student Number:").grid(row=1, column=0, sticky=tk.W, padx=10, pady=5)
+        number_entry = ttk.Entry(dialog, width=30)
+        number_entry.grid(row=1, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Name:").grid(row=2, column=0, sticky=tk.W, padx=10, pady=5)
+        name_entry = ttk.Entry(dialog, width=30)
+        name_entry.grid(row=2, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Coursework 1 (0-20):").grid(row=3, column=0, sticky=tk.W, padx=10, pady=5)
+        cw1_entry = ttk.Entry(dialog, width=30)
+        cw1_entry.grid(row=3, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Coursework 2 (0-20):").grid(row=4, column=0, sticky=tk.W, padx=10, pady=5)
+        cw2_entry = ttk.Entry(dialog, width=30)
+        cw2_entry.grid(row=4, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Coursework 3 (0-20):").grid(row=5, column=0, sticky=tk.W, padx=10, pady=5)
+        cw3_entry = ttk.Entry(dialog, width=30)
+        cw3_entry.grid(row=5, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Exam Mark (0-100):").grid(row=6, column=0, sticky=tk.W, padx=10, pady=5)
+        exam_entry = ttk.Entry(dialog, width=30)
+        exam_entry.grid(row=6, column=1, padx=10, pady=5)
+        
+        def validate_and_add():
+            try:
+                # Validate inputs
+                student_number = number_entry.get().strip()
+                name = name_entry.get().strip()
+                
+                if not student_number or not name:
+                    messagebox.showerror("Error", "Student number and name are required.")
+                    return
+                
+                # Check if student number already exists
+                if any(s.student_number == student_number for s in self.students):
+                    messagebox.showerror("Error", "Student number already exists.")
+                    return
+                
+                coursework_marks = [
+                    int(cw1_entry.get().strip()),
+                    int(cw2_entry.get().strip()),
+                    int(cw3_entry.get().strip())
+                ]
+                
+                # Validate coursework marks
+                for mark in coursework_marks:
+                    if mark < 0 or mark > 20:
+                        messagebox.showerror("Error", "Coursework marks must be between 0 and 20.")
+                        return
+                
+                exam_mark = int(exam_entry.get().strip())
+                if exam_mark < 0 or exam_mark > 100:
+                    messagebox.showerror("Error", "Exam mark must be between 0 and 100.")
+                    return
+                
+                # Create new student and add to list
+                new_student = Student(student_number, name, coursework_marks, exam_mark)
+                self.students.append(new_student)
+                
+                # Save to file
+                if self.save_data():
+                    dialog.destroy()
+                    self.view_all_students()
+                    messagebox.showinfo("Success", f"Student {name} added successfully.")
+                else:
+                    # Remove student if save failed
+                    self.students.remove(new_student)
+                    
+            except ValueError:
+                messagebox.showerror("Error", "Please enter valid numeric values for marks.")
+        
+        # Buttons
+        button_frame = ttk.Frame(dialog)
+        button_frame.grid(row=7, column=0, columnspan=2, pady=20)
+        
+        ttk.Button(button_frame, text="Add Student", command=validate_and_add).pack(side=tk.LEFT, padx=10)
+        ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT, padx=10)
+    
+    # Deleting a student record
+    def delete_student(self):
+        if not self.students:
+            messagebox.showwarning("No Data", "No student records available to delete.")
+            return
+        
+        # Selecting the Student
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Delete Student")
+        dialog.geometry("500x300")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        ttk.Label(dialog, text="Select Student to Delete", font=('Arial', 14, 'bold')).pack(pady=10)
+        
+        # Listbox with student data
+        listbox = tk.Listbox(dialog, width=80, height=10)
+        listbox.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        
+        for student in self.students:
+            listbox.insert(tk.END, f"{student.student_number} - {student.name} - {student.calculate_overall_percentage():.1f}%")
+        
+        def delete_selected():
+            selection = listbox.curselection()
+            if not selection:
+                messagebox.showwarning("No Selection", "Please select a student to delete.")
+                return
+            
+            index = selection[0]
+            student = self.students[index]
+            
+            # Confirming deletion
+            if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete {student.name} ({student.student_number})?"):
+                deleted_student = self.students.pop(index)
+                
+                # Save to file
+                if self.save_data():
+                    dialog.destroy()
+                    self.view_all_students()
+                    messagebox.showinfo("Success", f"Student {deleted_student.name} deleted successfully.")
+                else:
+                    # Restoring if the student data saving failed
+                    self.students.insert(index, deleted_student)
+        
+        # Buttons
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(pady=10)
+        
+        ttk.Button(button_frame, text="Delete Selected", command=delete_selected).pack(side=tk.LEFT, padx=10)
+        ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT, padx=10)
+    
+    # Updating a student record
+    def update_student(self):
+        if not self.students:
+            messagebox.showwarning("No Data", "No student records available to update.")
+            return
+        
+        #Selecting the student
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Update Student")
+        dialog.geometry("500x300")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        ttk.Label(dialog, text="Select Student to Update", font=('Arial', 14, 'bold')).pack(pady=10)
+        
+        listbox = tk.Listbox(dialog, width=80, height=10)
+        listbox.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        
+        for student in self.students:
+            listbox.insert(tk.END, f"{student.student_number} - {student.name} - {student.calculate_overall_percentage():.1f}%")
+        
+        def update_selected():
+            selection = listbox.curselection()
+            if not selection:
+                messagebox.showwarning("No Selection", "Please select a student to update.")
+                return
+            
+            index = selection[0]
+            student = self.students[index]
+            
+            dialog.destroy()
+            self.show_update_dialog(student, index)
+        
+        # Buttons
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(pady=10)
+        
+        ttk.Button(button_frame, text="Update Selected", command=update_selected).pack(side=tk.LEFT, padx=10)
+        ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT, padx=10)
+    
+    def show_update_dialog(self, student, index):
+        # Dialog window for updating student
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"Update Student: {student.name}")
+        dialog.geometry("400x400")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        ttk.Label(dialog, text=f"Update {student.name}", font=('Arial', 14, 'bold')).grid(row=0, column=0, columnspan=2, pady=10)
+        
+        ttk.Label(dialog, text="Student Number:").grid(row=1, column=0, sticky=tk.W, padx=10, pady=5)
+        number_entry = ttk.Entry(dialog, width=30)
+        number_entry.insert(0, student.student_number)
+        number_entry.grid(row=1, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Name:").grid(row=2, column=0, sticky=tk.W, padx=10, pady=5)
+        name_entry = ttk.Entry(dialog, width=30)
+        name_entry.insert(0, student.name)
+        name_entry.grid(row=2, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Coursework 1 (0-20):").grid(row=3, column=0, sticky=tk.W, padx=10, pady=5)
+        cw1_entry = ttk.Entry(dialog, width=30)
+        cw1_entry.insert(0, str(student.coursework_marks[0]))
+        cw1_entry.grid(row=3, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Coursework 2 (0-20):").grid(row=4, column=0, sticky=tk.W, padx=10, pady=5)
+        cw2_entry = ttk.Entry(dialog, width=30)
+        cw2_entry.insert(0, str(student.coursework_marks[1]))
+        cw2_entry.grid(row=4, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Coursework 3 (0-20):").grid(row=5, column=0, sticky=tk.W, padx=10, pady=5)
+        cw3_entry = ttk.Entry(dialog, width=30)
+        cw3_entry.insert(0, str(student.coursework_marks[2]))
+        cw3_entry.grid(row=5, column=1, padx=10, pady=5)
+        
+        ttk.Label(dialog, text="Exam Mark (0-100):").grid(row=6, column=0, sticky=tk.W, padx=10, pady=5)
+        exam_entry = ttk.Entry(dialog, width=30)
+        exam_entry.insert(0, str(student.exam_mark))
+        exam_entry.grid(row=6, column=1, padx=10, pady=5)
+        
+        def validate_and_update():
+            try:
+                # Validate inputs
+                student_number = number_entry.get().strip()
+                name = name_entry.get().strip()
+                
+                if not student_number or not name:
+                    messagebox.showerror("Error", "Student number and name are required.")
+                    return
+                
+                # Checking if student number already exists (excluding current student)
+                if any(s.student_number == student_number and s != student for s in self.students):
+                    messagebox.showerror("Error", "Student number already exists.")
+                    return
+                
+                coursework_marks = [
+                    int(cw1_entry.get().strip()),
+                    int(cw2_entry.get().strip()),
+                    int(cw3_entry.get().strip())
+                ]
+                
+                # Validate coursework marks
+                for mark in coursework_marks:
+                    if mark < 0 or mark > 20:
+                        messagebox.showerror("Error", "Coursework marks must be between 0 and 20.")
+                        return
+                
+                exam_mark = int(exam_entry.get().strip())
+                if exam_mark < 0 or exam_mark > 100:
+                    messagebox.showerror("Error", "Exam mark must be between 0 and 100.")
+                    return
+                
+                # Update student
+                student.student_number = student_number
+                student.name = name
+                student.coursework_marks = coursework_marks
+                student.exam_mark = exam_mark
+                
+                # Save to file
+                if self.save_data():
+                    dialog.destroy()
+                    self.view_all_students()
+                    messagebox.showinfo("Success", f"Student {name} updated successfully.")
+                else:
+                    # Revert changes if save failed
+                    self.load_data()
+                    
+            except ValueError:
+                messagebox.showerror("Error", "Please enter valid numeric values for marks.")
+        
+        # Buttons
+        button_frame = ttk.Frame(dialog)
+        button_frame.grid(row=7, column=0, columnspan=2, pady=20)
+        
+        ttk.Button(button_frame, text="Update Student", command=validate_and_update).pack(side=tk.LEFT, padx=10)
+        ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT, padx=10)
+    
+    # Show All student Records
     def view_all_students(self):
         self.clear_display()
         self.title_label.config(text="Student Marks Management System - All Student Records")
@@ -251,7 +583,7 @@ class StudentManagerApp:
         
         # Calculate summary statistics
         total_percentage = sum(student.calculate_overall_percentage() for student in self.students)
-        average_percentage = total_percentage / len(self.students)
+        average_percentage = total_percentage / len(self.students) if self.students else 0
         
         # Grade distribution
         grade_count = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
